@@ -44,6 +44,7 @@ SUBCOMMANDS
                                 --image-sequence <media> is the first numbered still of a sequence
   bench-decode <media> [--frames N]
   mcp                           MCP server on stdio (headless, or --bridge to the live app)
+  control <method> [JSON params] call a raw control method on the live app through --bridge
   help                          this text
   --version                     print the version
 
@@ -53,6 +54,7 @@ OPTIONS
   --save                        save the project back to --project when done
   --save-as <p.fcproj>          save the project to this path when done
   --bridge <127.0.0.1:PORT>     send commands to the running app (`filmcraft --control PORT`)
+                                `control` accepts one JSON object for params (default `{}`)
   --data-dir <dir>              FilmCraft data directory for user export presets (headless;
                                 default: the app's data directory)
   --keep-going                  `run`: report failing lines and continue
@@ -227,6 +229,33 @@ async fn main() {
                 Err(e) => fail(format!("{id}: {e}")),
             }
             b.finish(&a).await;
+        }
+        "control" => {
+            let Some(addr) = a.opt("--bridge") else { usage("control requires --bridge ADDR") };
+            for option in ["--project", "--demo", "--save", "--save-as", "--data-dir"] {
+                if a.flag(option) {
+                    usage(format!("control uses the live app; `{option}` is a headless/project option and cannot be used here"));
+                }
+            }
+            let method = a.pos(1).filter(|method| !method.is_empty()).unwrap_or_else(|| usage("control <method> [JSON object params]"));
+            if a.positionals.len() > 3 {
+                usage("control accepts one JSON params object; quote it if it contains spaces");
+            }
+            let params = match a.pos(2) {
+                None => json!({}),
+                Some(raw) => {
+                    let value: Value = serde_json::from_str(raw).unwrap_or_else(|e| usage(format!("control params must be a JSON object: {e}")));
+                    if !value.is_object() {
+                        usage("control params must be a JSON object (for no params, omit it or pass `{}`)");
+                    }
+                    value
+                }
+            };
+            let bridge = BridgeClient::new(addr).unwrap_or_else(|e| usage(e));
+            match bridge.call(method, params).await {
+                Ok(value) => print(&a, &value),
+                Err(e) => fail(format!("{method}: {e}")),
+            }
         }
         "run" => {
             let script = a.pos(1).unwrap_or_else(|| usage("run <script.jsonl | ->"));

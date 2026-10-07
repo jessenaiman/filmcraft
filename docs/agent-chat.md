@@ -36,6 +36,21 @@ Control requests (JSON lines over TCP, not HTTP):
 {"id":4,"method":"ui.agent.inspect"}
 ```
 
+The CLI can send the same raw control method and JSON params object, so use identical method/params
+with the CLI, MCP, or an in-app control request:
+
+```sh
+filmcraft-cli --bridge 127.0.0.1:19876 control ui.agent.inspect '{}'
+filmcraft-cli --bridge 127.0.0.1:19876 control ui.agent.send '{"text":"Inspect this live project and report what you actually observe."}'
+```
+
+`control` requires a running app and loopback `--bridge`; params must be one JSON object (or omitted
+for `{}`). It rejects headless project/demo, save, and data-directory options. Use `exec` for the
+engine-command shortcut (`engine.execute`) rather than a raw control method.
+
+Build the desktop with the existing transcription feature enabled:
+`cargo build --release -p filmcraft --features whisper`.
+
 Wait for transcript loading before sending. `ui.agent.send` and the Send button use the same dispatch
 function. Automation ids: `agent.input`, `agent.send`, `agent.transcript`, `panel.tab.AgentChat`.
 There is at most one request in flight, including while switching projects. Each request has unique

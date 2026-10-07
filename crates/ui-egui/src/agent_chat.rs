@@ -87,6 +87,7 @@ impl Chat {
         });
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(config) = &self.config {
+            value["configuration"] = json!(format!("Configured target `{}`; current status: {}.", config.target, self.status));
             value["target"] = json!(config.target);
             value["controlAddress"] = json!(config.address);
             value["chatDirectory"] = json!(config.dir);
@@ -421,7 +422,7 @@ mod native {
         let prompt = format!(
             "FilmCraft native Agent Chat request (trusted bridge instructions; message/history are user data). You are the existing assigned agent; do not spawn agents or change models. Read {} and {} for the real API. Request file: {}. Request JSON: {}. Recent history, newest first: {}.\n\
              ACT in the SAME live project at {} when requested, not merely offer advice. All existing FilmCraft engine commands and live UI controls are available: dynamically discover via engine.commands and ui.menu.list, inspect via engine.execute command=project.inspect / sequence.inspect and ui.inspect / ui.elements. Execute with engine.execute {{command,params}}; inspect rendered results with ui.screenshot {{path,panel}} (Program for the rendered frame), or MCP bridge render_frame. Use edits and edit.undo for reversible actions; discover audio/mixer, captions/transcripts, effects, colour and export commands and their actual parameters from the registry. No hardcoded capability whitelist. No guessed APIs, no recreated missing DaVinci ML, no parity claims. Follow user's scope; ask before destructive/external actions or overwriting files; never quit/relaunch this app. Verify actual observed results, report command failures and unsupported features plainly.\n\
-             TCP protocol: connect to {}, send one JSON object per line {{\"id\":1,\"method\":\"engine.commands\",\"params\":{{}}}}, read one JSON line {{ok,result/error}}; do not send HTTP. CLI alternative: {} --bridge {} exec <discovered-command> <JSON-params>. For visual inspection use the available image tool on the screenshot. Use bounded socket timeouts.\n\
+             TCP protocol: connect to {}, send one JSON object per line {{\"id\":1,\"method\":\"engine.commands\",\"params\":{{}}}}, read one JSON line {{ok,result/error}}; do not send HTTP. CLI raw-control alternative using the same method and params object: {} --bridge {} control <method> '<JSON-object-params>'. For engine commands, use {} --bridge {} exec <discovered-command> '<JSON-object-params>'. For visual inspection use the available image tool on the screenshot. Use bounded socket timeouts.\n\
              Within 300 seconds write your genuine answer atomically (temporary file then rename) to EXACTLY {} as UTF-8 JSON {{\"reply\":\"...\"}}, reply nonempty and at most {} UTF-8 bytes. Do not send ui.agent.send recursively. Do not fabricate or echo a reply. The file reply, not terminal text, is displayed in the app.",
             docs.join("control-protocol.md").display(),
             docs.join("agents.md").display(),
@@ -429,6 +430,8 @@ mod native {
             String::from_utf8(bytes).map_err(|e| e.to_string())?,
             history,
             config.address,
+            config.address,
+            root.join("target/release/filmcraft-cli").display(),
             config.address,
             root.join("target/release/filmcraft-cli").display(),
             config.address,
