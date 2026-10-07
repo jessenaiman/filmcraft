@@ -99,6 +99,16 @@ pub fn handle(app: &mut FilmcraftApp, ctx: &egui::Context, req: &ControlRequest)
         },
         "ui.menu.list" => ok(serde_json::to_value(crate::menus::menu_items(app)).unwrap_or_default()),
         "ui.inspect" => ok(inspect(app, ctx)),
+        "ui.agent.inspect" => ok(app.agent_chat.inspect()),
+        "ui.agent.send" => {
+            let Some(text) = s("text") else {
+                return err("missing string `text`");
+            };
+            match crate::agent_chat::send(app, ctx, text) {
+                Ok(v) => ok(v),
+                Err(e) => err(e),
+            }
+        }
         "perf.stats" => ok(crate::perf::stats(app)),
         "ui.elements" => {
             if app.timeline_still < 2 {
