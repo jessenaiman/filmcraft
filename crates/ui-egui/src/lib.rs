@@ -6,6 +6,7 @@
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable))]
 
+pub mod agent_chat;
 pub mod automation;
 pub mod brand;
 pub mod control;
@@ -167,6 +168,7 @@ pub struct FilmcraftApp {
     pub dialog: Option<Dialog>,
     pub file_dialogs: panels::file_dialogs::FileDialogState,
     pub auto: automation::Registry,
+    pub agent_chat: agent_chat::Chat,
     /// Named textures (monitors, thumbnails) with the key they show.
     textures: HashMap<String, (FrameKey, TextureHandle)>,
     control_rx: Option<Receiver<ControlRequest>>,
@@ -370,6 +372,7 @@ impl FilmcraftApp {
             dialog: recovery.then_some(Dialog::Recovery),
             file_dialogs: Default::default(),
             auto: Default::default(),
+            agent_chat: Default::default(),
             textures: HashMap::new(),
             control_rx: None,
             deferred: Vec::new(),
@@ -1453,6 +1456,7 @@ impl eframe::App for FilmcraftApp {
         }
         self.timeline_still = if self.ui.timeline.animating() { 0 } else { self.timeline_still.saturating_add(1) };
         let had_synthetic = !self.synthetic.is_empty();
+        self.agent_chat.poll(&self.session, ctx);
         self.drain_control(ctx);
         if !self.synthetic.is_empty() && !had_synthetic {
             // Occluded macOS windows stop running `ui`; bring the window forward (without taking
